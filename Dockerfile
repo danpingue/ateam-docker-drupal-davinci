@@ -1,17 +1,21 @@
+############################################################
+# Dockerfile to build Drupal and LAMP Installed Containers
+# Based on Ubuntu
+############################################################
+
+# Set the base image to Ubuntu
 FROM ubuntu:16.04
 
-ENV LOCALE en_US.UTF-8
-EXPOSE 80 443 22
+# Set the enviroment variable
+ENV DEBIAN_FRONTEND noninteractive
 
-# ADD assets/etc/apt /assets/etc/apt
-
-# RUN /bin/bash -c 'ln -fs /assets/etc/apt/sources.list /etc/apt/sources.list' && /bin/bash -c 'ln -fs /assets/etc/apt/apt.conf.d/99recommends /etc/apt/apt.conf.d/99recommends'
-
+# Install required packages
+RUN apt-get clean all
 RUN apt-get update && \
     # base depends
-    DEBIAN_FRONTEND=noninteractive apt-get install -y locales net-tools iputils-ping iproute2 sysstat iotop tcpdump tcpick bwm-ng tree strace screen rsync inotify-tools socat wget curl \
-    openssh-server openssh-client build-essential automake make autoconf libpcre3-dev software-properties-common supervisor sudo git vim emacs python-minimal fontconfig ssmtp mailutils \
-    bash-completion less unzip\
+    apt-get install -y locales wget curl sudo git vim less unzip re2c \
+    build-essential libpcre3-dev software-properties-common automake make autoconf \
+    bash-completion supervisor openssh-server openssh-client \
     # stack services depends
     apache2 apache2-utils mysql-client mysql-server libapache2-mod-php libapache2-mod-geoip geoip-database \
     # php depends
@@ -23,7 +27,6 @@ RUN apt-get update && \
     php-dev \
     php-enchant \
     php-gd \
-    php-gd \
     php-gmp \
     php-imap \
     php-interbase \
@@ -33,52 +36,54 @@ RUN apt-get update && \
     php-mbstring \
     php-memcache \
     php-mysql \
-    php-odbc \
     php-opcache \
     php-pear \
-    php-pgsql \
-    php-pspell \
     php-pspell \
     php-readline \
     php-recode \
-    #php-snmp \
-    php-soap \
-    php-sqlite3 \
     php-tidy \
     php-xdebug \
     php-xml \
     php-xmlrpc \
     php-zip
 
-RUN locale-gen $LOCALE && update-locale LANG=$LOCALE
-
-## Install Composer
-RUN curl -k -sS https://getcomposer.org/installer | php && \
-    mv composer.phar /usr/local/bin/composer && \
-    chmod +x /usr/local/bin/composer
-
-# Setup mariadb
-RUN mkdir -p /var/run/mysqld && \
-    chown -R mysql: /var/run/mysqld && \
-    mv /etc/mysql/my.cnf /etc/mysql/my.cnf.dist && \
-    mv /var/lib/mysql /var/lib/mysql.dist
-
-# Setup Apache
-RUN mkdir -p /var/run/apache2 && \
-    chown -R www-data: /var/run/apache2 && \
-    a2enmod actions alias authz_host deflate dir expires headers mime rewrite ssl php7.0 proxy proxy_http && \
-    mv /etc/apache2/sites-enabled /etc/apache2/sites-enabled.dist
-
 # Setup ssh
 RUN mkdir -p /var/run/sshd
 
-# since this image will not be built as frequently as before, 
-# every individual asset inclusion is replaced by the general on-entrypoint-rsynced one
-ADD assets /assets
 
-VOLUME ["/var/log/apache2","/var/log/supervisor","/var/log/mysql","/var/lib/mysql"]
-ENTRYPOINT ["/assets/bin/entrypoint"]
+# Add shell scripts for starting apache2
+ADD apache2-start.sh /apache2-start.sh
 
+# Add shell scripts for starting mysql
+ADD mysql-start.sh /mysql-start.sh
+ADD run.sh /run.sh
+
+# Give the execution permissions
+RUN chmod 755 /*.sh
+
+# Add the Configurations files
+ADD my.cnf /etc/mysql/conf.d/my.cnf
+ADD supervisord-lamp.conf /etc/supervisor/conf.d/supervisord-lamp.conf
+
+
+# Remove pre-installed database
+RUN rm -rf /var/lib/mysql/*
+
+# Enviroment variable for setting the Username and Password of MySQL
+ENV MYSQL_USER root
+ENV MYSQL_PASS root
+
+# Drupal Database name $PROJECT_NAME
+ENV DRUPAL_DBNAME drupal
+
+# Add MySQL utils
+ADD create_database.sh /create_database.sh
+ADD mysql_user.sh /mysql_user.sh
+RUN chmod 755 /*.sh
+
+
+# Add volumes for MySQL 
+VOLUME ["/var/log/apache2","/var/log/supervisor","/var/log/mysql","/var/lib/mysql", "/etc/mysql"]
 
 # INSTALL DRUPAL
 
@@ -91,6 +96,12 @@ ENV DRUSH_VERSION ${DRUSH_VERSION}
 ENV DRUPAL_VERSION ${DRUPAL_VERSION}
 ENV NODE_VERSION ${NODE_VERSION}
 ENV DRUPAL_ROOT ${DRUPAL_ROOT}
+
+# Install Composer
+RUN curl -k -sS https://getcomposer.org/installer | php && \
+    mv composer.phar /usr/local/bin/composer && \
+    chmod +x /usr/local/bin/composer
+
 
 # Install uploadprogress php extension from a php-7-supported src
 RUN /bin/bash -c 'cd /tmp/ && \
@@ -122,5 +133,8 @@ RUN curl https://drupalconsole.com/installer -L -o /usr/local/bin/drupal && \
     chmod +x /usr/local/bin/drupal
 
 
+# Set the port
+EXPOSE 80 3306
 
-# go to https://github.com/Emergya/ubuntu_16.04-drupal/blob/master/Dockerfile
+# Execut the run.sh 
+CMD ["/run.sh"]
