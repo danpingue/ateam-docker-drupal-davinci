@@ -78,3 +78,34 @@ ADD assets /assets
 
 VOLUME ["/var/log/apache2","/var/log/supervisor","/var/log/mysql","/var/lib/mysql"]
 ENTRYPOINT ["/assets/bin/entrypoint"]
+
+
+# INSTALL DRUPAL
+
+ARG DRUSH_VERSION=8.1.10
+ARG DRUPAL_VERSION=8
+ARG DRUPAL_ROOT=/var/www/html/web
+
+ENV DRUSH_VERSION ${DRUSH_VERSION}
+ENV DRUPAL_VERSION ${DRUPAL_VERSION}
+ENV DRUPAL_ROOT ${DRUPAL_ROOT}
+
+# Install uploadprogress php extension from a php-7-supported src
+RUN /bin/bash -c 'cd /tmp/ && \
+      git clone https://github.com/Jan-E/uploadprogress.git && \
+      cd uploadprogress && \
+      phpize && \
+      ./configure && make && make install && \
+      echo "extension=uploadprogress.so" > /etc/php/7.0/mods-available/uploadprogress.ini && \
+      phpenmod uploadprogress'
+
+## Install Drush.
+RUN composer global require drush/drush:$DRUSH_VERSION && \
+    mv $HOME/.composer /usr/local/share/composer && \
+    ln -s /usr/local/share/composer/vendor/drush/drush/drush /usr/local/bin/drush
+
+## Install drupal console
+RUN curl https://drupalconsole.com/installer -L -o /usr/local/bin/drupal && \
+    chmod +x /usr/local/bin/drupal
+
+# go to https://github.com/Emergya/ubuntu_16.04-drupal/blob/master/Dockerfile
