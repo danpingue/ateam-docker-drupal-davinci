@@ -1,0 +1,34 @@
+version: '3'
+services:
+  dev-d8.ateam:
+    build: .
+    environment:
+    #  - HOST_UID=${HOST_UID}
+    #  - HOST_GID=${HOST_GID}
+    #  - DEVELOPER_USER=${DEVELOPER_USER}
+      - DEVELOPER_USER="ocastano"
+      - LOCALES=es_ES.UTF-8 en_US.UTF-8
+    #  - PROJECT_NAME=${PROJECT_NAME}
+      - PROJECT_NAME="ateam-d8-dvinci"
+    #  - ENVIRONMENT=${ENVIRONMENT}
+    #  - ENV_VHOST=${ENV_VHOST}
+    #  - VIRTUAL_HOSTS=${VIRTUAL_HOSTS}
+    #  - MYSQL_HOST=${MYSQL_HOST} # defaults to 'localhost'
+    #  - MYSQL_USER=${MYSQL_USER} # defaults to 'root'
+    #  - MYSQL_PASS=${MYSQL_PASS} # defaults to ''
+    #  - MYSQL_DBNAME=${MYSQL_DBNAME} # defaults to '$PROJECT_NAME' or '_PROJECT_NAME_'
+    #  - MEMCACHED_HOST=${MEMCACHED_HOST}
+    #  - MEMCACHED_PORT=${MEMCACHED_PORT}
+    ports:
+      - 80:80
+      - 3306:3306
+    volumes:
+    #  - ${SSH_CREDENTIALS_DIR}:${SSH_CREDENTIALS_DIR}
+    #  - ${PROJECT_DIR}:${PROJECT_DIR}
+    #  - ${PROJECT_DIR}/src:/var/www/html
+      - ./src/:/var/www/html
+    #  - ${DATA_DIR}:/data
+    #  - ${DATA_DIR}/docker-containers-volumes/var/www/html/app-shared-files:/var/www/html/web/app-shared-files # in drupal, the typical 
+    #  - ${DATA_DIR}/docker-containers-volumes/var/log/apache2:/var/log/apache2
+    #  - ${DATA_DIR}/docker-containers-volumes/etc/apache2/htpasswd/env-htpasswd:/etc/apache2/htpasswd/env-htpasswd
+    #  - ${DATA_DIR}/docker-containers-volumes/var/lib/mysql:/var/lib/mysql

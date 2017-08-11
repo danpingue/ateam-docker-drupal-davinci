@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -x
+
+source /assets/bin/entrypoint.functions
+
+dump-docker-environment
+
+configure-locales
+
+link-assets
+
+set-environment-divergences
+
+test -z "$DEVELOPER_USER" && export DEVELOPER_USER="developer"
+create-developer-user $DEVELOPER_USER
+
+add-virtualhosts-to-etc-hosts
+
+init-mysql-db
+
+leave-supervisord-in-foreground
