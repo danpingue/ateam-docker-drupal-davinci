@@ -84,10 +84,12 @@ ENTRYPOINT ["/assets/bin/entrypoint"]
 
 ARG DRUSH_VERSION=8.1.10
 ARG DRUPAL_VERSION=8
+ARG NODE_VERSION=6.10.0
 ARG DRUPAL_ROOT=/var/www/html/web
 
 ENV DRUSH_VERSION ${DRUSH_VERSION}
 ENV DRUPAL_VERSION ${DRUPAL_VERSION}
+ENV NODE_VERSION ${NODE_VERSION}
 ENV DRUPAL_ROOT ${DRUPAL_ROOT}
 
 # Install uploadprogress php extension from a php-7-supported src
@@ -99,6 +101,17 @@ RUN /bin/bash -c 'cd /tmp/ && \
       echo "extension=uploadprogress.so" > /etc/php/7.0/mods-available/uploadprogress.ini && \
       phpenmod uploadprogress'
 
+# Installing nodejs from binaries
+RUN cd /tmp && \
+  curl -sL "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz" -o node-linux-x64.tar.gz && \
+  tar -zxf "node-linux-x64.tar.gz" -C /usr/local --strip-components=1 && \
+  rm node-linux-x64.tar.gz && \
+  ln -s /usr/local/bin/node /usr/local/bin/nodejs
+
+# Install bower and gulp-cli globally
+RUN npm install --global bower gulp-cli
+
+
 ## Install Drush.
 RUN composer global require drush/drush:$DRUSH_VERSION && \
     mv $HOME/.composer /usr/local/share/composer && \
@@ -107,5 +120,7 @@ RUN composer global require drush/drush:$DRUSH_VERSION && \
 ## Install drupal console
 RUN curl https://drupalconsole.com/installer -L -o /usr/local/bin/drupal && \
     chmod +x /usr/local/bin/drupal
+
+
 
 # go to https://github.com/Emergya/ubuntu_16.04-drupal/blob/master/Dockerfile
