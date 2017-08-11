@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get clean all
 RUN apt-get update && \
     # base depends
-    apt-get install -y locales wget curl sudo git vim less unzip re2c \
+    apt-get install -y locales wget curl sudo git vim less unzip re2c rsync \
     build-essential libpcre3-dev software-properties-common automake make autoconf \
     bash-completion supervisor openssh-server openssh-client \
     # stack services depends
@@ -45,7 +45,9 @@ RUN apt-get update && \
     php-xdebug \
     php-xml \
     php-xmlrpc \
-    php-zip
+    php-zip \
+    php7-fpm \
+    && \
 
 # Setup ssh
 RUN mkdir -p /var/run/sshd
@@ -97,11 +99,6 @@ ENV DRUPAL_VERSION ${DRUPAL_VERSION}
 ENV NODE_VERSION ${NODE_VERSION}
 ENV DRUPAL_ROOT ${DRUPAL_ROOT}
 
-# Install Composer
-RUN curl -k -sS https://getcomposer.org/installer | php && \
-    mv composer.phar /usr/local/bin/composer && \
-    chmod +x /usr/local/bin/composer
-
 
 # Install uploadprogress php extension from a php-7-supported src
 RUN /bin/bash -c 'cd /tmp/ && \
@@ -111,6 +108,11 @@ RUN /bin/bash -c 'cd /tmp/ && \
       ./configure && make && make install && \
       echo "extension=uploadprogress.so" > /etc/php/7.0/mods-available/uploadprogress.ini && \
       phpenmod uploadprogress'
+
+# Install Composer
+RUN curl -k -sS https://getcomposer.org/installer | php && \
+    mv composer.phar /usr/local/bin/composer && \
+    chmod +x /usr/local/bin/composer
 
 # Installing nodejs from binaries
 RUN cd /tmp && \
@@ -122,6 +124,10 @@ RUN cd /tmp && \
 # Install bower and gulp-cli globally
 RUN npm install --global bower gulp-cli
 
+# Install PHPUnit
+RUN curl -sSL https://phar.phpunit.de/phpunit.phar -o phpunit.phar && \
+        chmod +x phpunit.phar && \
+        mv phpunit.phar /usr/local/bin/phpunit
 
 ## Install Drush.
 RUN composer global require drush/drush:$DRUSH_VERSION && \
@@ -131,6 +137,42 @@ RUN composer global require drush/drush:$DRUSH_VERSION && \
 ## Install drupal console
 RUN curl https://drupalconsole.com/installer -L -o /usr/local/bin/drupal && \
     chmod +x /usr/local/bin/drupal
+
+# Configure php.ini
+RUN sed -i \
+        -e "s/^expose_php.*/expose_php = Off/" \
+        -e "s/^;date.timezone.*/date.timezone = UTC/" \
+        -e "s/^memory_limit.*/memory_limit = -1/" \
+        -e "s/^max_execution_time.*/max_execution_time = 300/" \
+        -e "s/^; max_input_vars.*/max_input_vars = 2000/" \
+        -e "s/^post_max_size.*/post_max_size = 512M/" \
+        -e "s/^upload_max_filesize.*/upload_max_filesize = 512M/" \
+        -e "s/^error_reporting.*/error_reporting = E_ALL/" \
+        -e "s/^display_errors.*/display_errors = On/" \
+        -e "s/^display_startup_errors.*/display_startup_errors = On/" \
+        -e "s/^track_errors.*/track_errors = On/" \
+        -e "s/^mysqlnd.collect  _memory_statistics.*/mysqlnd.collect_memory_statistics = On/" \
+        /etc/php7/php.ini && \
+
+    echo "error_log = \"/proc/self/fd/2\"" | tee -a /etc/php/7.0/apache2/php.ini
+
+
+# Create user www-data
+RUN addgroup -g 82 -S www-data && \
+	adduser -u 82 -D -S -G www-data www-data
+
+# Create work dir
+RUN mkdir -p /var/www/html && \
+    chown -R www-data:www-data /var/www
+
+# Init www-data user
+USER www-data
+RUN composer global require hirak/prestissimo:^0.3 --optimize-autoloader && \
+    rm -rf ~/.composer/.cache && \
+    drupal init --override
+
+USER root
+# CMD docker-entrypoint.sh
 
 
 # Set the port
