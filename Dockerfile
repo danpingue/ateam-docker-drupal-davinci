@@ -28,7 +28,7 @@ ADD configs/ssh/supervisor.conf /etc/supervisor/conf.d/ssh.conf
 RUN mkdir -p /var/run/sshd
 
 # Apache
-RUN apt-get install -y apache2
+RUN apt-get install -y apache2 apache2-utils libapache2-mod-php libapache2-mod-geoip geoip-database
 ADD configs/apache2/apache2-service.sh /apache2-service.sh
 ADD configs/apache2/apache2-setup.sh /apache2-setup.sh
 RUN chmod +x /*.sh
@@ -37,35 +37,63 @@ ADD configs/apache2/supervisor.conf /etc/supervisor/conf.d/apache2.conf
 RUN /apache2-setup.sh
 
 # PHP
-RUN apt-get install -y libapache2-mod-php php php-json php-cli php-curl curl php-mcrypt php-xdebug mcrypt libmcrypt-dev php-mysql
+RUN apt-get install -y \
+    php \
+    php-bcmath \
+    php-cli \
+    php-curl \
+    php-dba \
+    php-dev \
+    php-enchant \
+    php-gd \
+    php-gmp \
+    php-imap \
+    php-interbase \
+    php-intl \
+    php-json \
+    php-ldap \
+    php-mbstring \
+    php-memcache \
+    php-mysql \
+    php-opcache \
+    php-pear \
+    php-pspell \
+    php-readline \
+    php-recode \
+    php-soap \
+    php-tidy \
+    php-xdebug \
+    php-xml \
+    php-xmlrpc \
+    php-zip
+
 ADD configs/php/php.ini /etc/php/apache2/conf.d/30-docker.ini
 
 
 # MySQL
-# RUN apt-get install -y mysql-server mysql-client 
-# ADD configs/mysql/mysql-setup.sh /mysql-setup.sh
-# RUN chmod +x /*.sh
-# ADD configs/mysql/my.cnf /etc/mysql/my.cnf
-# ADD configs/mysql/supervisor.conf /etc/supervisor/conf.d/mysql.conf
-# RUN /mysql-setup.sh
+RUN apt-get install -y mysql-server mysql-client 
+ADD configs/mysql/mysql-setup.sh /mysql-setup.sh
+RUN chmod +x /*.sh
+ADD configs/mysql/my.cnf /etc/mysql/my.cnf
+ADD configs/mysql/supervisor.conf /etc/supervisor/conf.d/mysql.conf
+RUN /mysql-setup.sh
 
 # PHPMyAdmin
-# RUN (echo 'phpmyadmin phpmyadmin/dbconfig-install boolean true' | debconf-set-selections)
-# RUN (echo 'phpmyadmin phpmyadmin/app-password password root' | debconf-set-selections)
-# RUN (echo 'phpmyadmin phpmyadmin/app-password-confirm password root' | debconf-set-selections)
-# RUN (echo 'phpmyadmin phpmyadmin/mysql/admin-pass password root' | debconf-set-selections)
-# RUN (echo 'phpmyadmin phpmyadmin/mysql/app-pass password root' | debconf-set-selections)
-# RUN (echo 'phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2' | debconf-set-selections)
-# RUN apt-get install phpmyadmin -y
-# ADD configs/phpmyadmin/config.inc.php /etc/phpmyadmin/conf.d/config.inc.php
-# RUN chmod 755 /etc/phpmyadmin/conf.d/config.inc.php
-# ADD configs/phpmyadmin/phpmyadmin-setup.sh /phpmyadmin-setup.sh
-# RUN chmod +x /phpmyadmin-setup.sh
-# RUN /phpmyadmin-setup.sh
+RUN (echo 'phpmyadmin phpmyadmin/dbconfig-install boolean true' | debconf-set-selections)
+RUN (echo 'phpmyadmin phpmyadmin/app-password password root' | debconf-set-selections)
+RUN (echo 'phpmyadmin phpmyadmin/app-password-confirm password root' | debconf-set-selections)
+RUN (echo 'phpmyadmin phpmyadmin/mysql/admin-pass password root' | debconf-set-selections)
+RUN (echo 'phpmyadmin phpmyadmin/mysql/app-pass password root' | debconf-set-selections)
+RUN (echo 'phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2' | debconf-set-selections)
+RUN apt-get install phpmyadmin -y
+ADD configs/phpmyadmin/config.inc.php /etc/phpmyadmin/conf.d/config.inc.php
+RUN chmod 755 /etc/phpmyadmin/conf.d/config.inc.php
+ADD configs/phpmyadmin/phpmyadmin-setup.sh /phpmyadmin-setup.sh
+RUN chmod +x /phpmyadmin-setup.sh
+RUN /phpmyadmin-setup.sh
 
 # Start
-# VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor","/var/log/mysql","/var/lib/mysql"]
-VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor"]
-# EXPOSE 22 80 3306
+VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor","/var/log/mysql","/var/lib/mysql"]
 EXPOSE 22 80 3306
+
 CMD ["supervisord", "-n"]
