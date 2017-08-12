@@ -77,8 +77,8 @@ RUN chmod +x /*.sh
 ADD configs/mysql/my.cnf /etc/mysql/my.cnf
 ADD configs/mysql/supervisor.conf /etc/supervisor/conf.d/mysql.conf
 RUN mkdir -p /var/run/mysqld && \
-        chown -R mysql: /var/run/mysqld
-# RUN /mysql-setup.sh
+    chown -R mysql: /var/run/mysqld
+RUN /mysql-setup.sh
 
 # PHPMyAdmin
 RUN (echo 'phpmyadmin phpmyadmin/dbconfig-install boolean true' | debconf-set-selections)
@@ -92,7 +92,7 @@ ADD configs/phpmyadmin/config.inc.php /etc/phpmyadmin/conf.d/config.inc.php
 RUN chmod 755 /etc/phpmyadmin/conf.d/config.inc.php
 ADD configs/phpmyadmin/phpmyadmin-setup.sh /phpmyadmin-setup.sh
 RUN chmod +x /phpmyadmin-setup.sh
-# RUN /phpmyadmin-setup.sh
+RUN /phpmyadmin-setup.sh
 
 # Start
 VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor","/var/log/mysql","/var/lib/mysql"]
