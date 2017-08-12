@@ -6,6 +6,7 @@ services:
       - PROJECT_NAME="ateam-d8-dvinci"
     ports:
       - 80:80
-      - 3306:3306
+      - 222:22
+      - 33306:3306
     volumes:
       - ./src/:/var/www/html
