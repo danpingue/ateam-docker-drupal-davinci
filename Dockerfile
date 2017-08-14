@@ -94,6 +94,8 @@ RUN sed -i -e "s/\$cfg\['Servers'\]\[\$i\]\['\(table_uiprefs\|history\)'\].*/\$c
 
 # Setup MySQL, bind on all addresses.
 RUN apt-get install -y mysql-server mysql-client 
+RUN mkdir -p /var/run/mysqld && \
+    chown -R mysql: /var/run/mysqld
 RUN sed -i -e 's/^bind-address\s*=\s*127.0.0.1/#bind-address = 127.0.0.1/' /etc/mysql/my.cnf
 RUN /etc/init.d/mysql start && \
 	mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO drupal@localhost IDENTIFIED BY 'drupal'"
@@ -182,15 +184,9 @@ RUN cd /var/www && \
 	drush dl admin_menu devel && \
 	# In order to enable Simpletest, we need to download PHPUnit.
 	composer install --dev && \
-	# Admin Menu is broken. See https://www.drupal.org/node/2563867 for more info.
-	# As long as it is not fixed, only enable simpletest and devel.
-	# drush en -y admin_menu simpletest devel
-	drush en -y simpletest devel && \
 	drush en -y bartik
 RUN cd /var/www && \
 	drush cset system.theme default 'bartik' -y
-# Allow Kernel and Browser tests to be run via PHPUnit.	
-RUN sed -i 's/name="SIMPLETEST_DB" value=""/name="SIMPLETEST_DB" value="sqlite:\/\/localhost\/tmp\/db.sqlite"/' /var/www/core/phpunit.xml.dist
 
 
 
