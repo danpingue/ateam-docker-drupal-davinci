@@ -15,8 +15,5 @@ done
 # Create the phpmyadmin storage configuration database.
 mysql -uroot -proot -e "CREATE DATABASE phpmyadmin; GRANT ALL PRIVILEGES ON phpmyadmin.* TO 'root'@'localhost' IDENTIFIED BY 'root'; FLUSH PRIVILEGES;"
 
-# Import the configuration storage database.
-gunzip < /usr/share/doc/phpmyadmin/examples/create_tables.sql.gz | mysql -u root -proot phpmyadmin
-
 # Shutdown the server.
 mysqladmin -u root -proot shutdown

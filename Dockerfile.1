@@ -12,6 +12,10 @@ ENV PHP_VERSION ${PHP_VERSION}
 # Base Packages
 RUN apt-get update -y
 
+
+#RUN apt-get install -y net-tools iputils-ping iproute2 sysstat iotop tcpdump tcpick bwm-ng tree strace screen inotify-tools socat 
+# software-properties-common  emacs python-minimal fontconfig ssmtp mailutils bash-completion less unzip automake make
+
 # Basic packages
 RUN apt-get install -y locales git wget curl vim debconf-utils sudo build-essential autoconf libpcre3-dev rsync \
         software-properties-common python-software-properties
@@ -19,6 +23,15 @@ RUN apt-get install -y locales git wget curl vim debconf-utils sudo build-essent
 # Set locale
 RUN locale-gen $LOCALE && update-locale LANG=$LOCALE
 
+# Supervisor
+RUN apt-get install -y supervisor
+RUN mkdir -p /var/log/supervisor
+
+
+# SSH
+RUN apt-get install -y openssh-server
+ADD configs/ssh/supervisor.conf /etc/supervisor/conf.d/ssh.conf
+RUN mkdir -p /var/run/sshd
 
 # Apache
 RUN apt-get install -y apache2 apache2-utils libapache2-mod-geoip geoip-database
@@ -66,57 +79,37 @@ RUN apt-get install -y \
 
 ADD configs/php/php.ini /etc/php/$PHP_VERSION/apache2/php.ini
 
-# Setup PHP.
-RUN sed -i 's/display_errors = Off/display_errors = On/' /etc/php/7.0/apache2/php.ini
-RUN sed -i 's/display_errors = Off/display_errors = On/' /etc/php/7.0/cli/php.ini
-
-# Setup Apache.
-# In order to run our Simpletest tests, we need to make Apache
-# listen on the same port as the one we forwarded. Because we use
-# 8080 by default, we set it up for that port.
-RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
-RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/000-default.conf
-RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/default-ssl.conf
-RUN echo "Listen 8080" >> /etc/apache2/ports.conf
-RUN echo "Listen 8081" >> /etc/apache2/ports.conf
-RUN echo "Listen 8443" >> /etc/apache2/ports.conf
-RUN sed -i 's/VirtualHost \*:80/VirtualHost \*:\*/' /etc/apache2/sites-available/000-default.conf
-RUN sed -i 's/VirtualHost __default__:443/VirtualHost _default_:443 _default_:8443/' /etc/apache2/sites-available/default-ssl.conf
-RUN a2enmod rewrite
-RUN a2enmod ssl
-RUN a2ensite default-ssl.conf
-
-# Setup PHPMyAdmin
-RUN apt-get install phpmyadmin -y
-RUN echo "\n# Include PHPMyAdmin configuration\nInclude /etc/phpmyadmin/apache.conf\n" >> /etc/apache2/apache2.conf
-RUN sed -i -e "s/\/\/ \$cfg\['Servers'\]\[\$i\]\['AllowNoPassword'\]/\$cfg\['Servers'\]\[\$i\]\['AllowNoPassword'\]/g" /etc/phpmyadmin/config.inc.php
-RUN sed -i -e "s/\$cfg\['Servers'\]\[\$i\]\['\(table_uiprefs\|history\)'\].*/\$cfg\['Servers'\]\[\$i\]\['\1'\] = false;/g" /etc/phpmyadmin/config.inc.php
-
-# Setup MySQL, bind on all addresses.
-RUN apt-get install -y mysql-server mysql-client 
-RUN sed -i -e 's/^bind-address\s*=\s*127.0.0.1/#bind-address = 127.0.0.1/' /etc/mysql/my.cnf
-RUN /etc/init.d/mysql start && \
-	mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO drupal@localhost IDENTIFIED BY 'drupal'"
-
-# Setup SSH.
-RUN apt-get install -y openssh-server
-RUN echo 'root:root' | chpasswd
-RUN sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-RUN mkdir /var/run/sshd && chmod 0755 /var/run/sshd
-RUN mkdir -p /root/.ssh/ && touch /root/.ssh/authorized_keys
-RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
-
-# Supervisor
-RUN apt-get install -y supervisor
-RUN mkdir -p /var/log/supervisor
-RUN echo '[program:apache2]\ncommand=/bin/bash -c "source /etc/apache2/envvars && exec /usr/sbin/apache2 -DFOREGROUND"\nautorestart=true\n\n' >> /etc/supervisor/supervisord.conf
-RUN echo '[program:mysql]\ncommand=/usr/bin/pidproxy /var/run/mysqld/mysqld.pid /usr/sbin/mysqld\nautorestart=true\n\n' >> /etc/supervisor/supervisord.conf
-RUN echo '[program:sshd]\ncommand=/usr/sbin/sshd -D\n\n' >> /etc/supervisor/supervisord.conf
-
-
 # Setup XDebug.
-RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/7.0/apache2/conf.d/20-xdebug.ini
-RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/7.0/cli/conf.d/20-xdebug.ini
+RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini
+RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/$PHP_VERSION/cli/conf.d/20-xdebug.ini
+
+
+# MySQL
+RUN apt-get install -y mysql-server mysql-client 
+ADD configs/mysql/mysql-setup.sh /mysql-setup.sh
+RUN chmod +x /*.sh
+ADD configs/mysql/my.cnf /etc/mysql/my.cnf
+ADD configs/mysql/supervisor.conf /etc/supervisor/conf.d/mysql.conf
+RUN mkdir -p /var/run/mysqld && \
+    chown -R mysql: /var/run/mysqld
+RUN /mysql-setup.sh
+
+# PHPMyAdmin
+RUN (echo 'phpmyadmin phpmyadmin/dbconfig-install boolean true' | debconf-set-selections)
+RUN (echo 'phpmyadmin phpmyadmin/app-password password root' | debconf-set-selections)
+RUN (echo 'phpmyadmin phpmyadmin/app-password-confirm password root' | debconf-set-selections)
+RUN (echo 'phpmyadmin phpmyadmin/mysql/admin-pass password root' | debconf-set-selections)
+RUN (echo 'phpmyadmin phpmyadmin/mysql/app-pass password root' | debconf-set-selections)
+RUN (echo 'phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2' | debconf-set-selections)
+RUN apt-get install phpmyadmin -y
+ADD configs/phpmyadmin/config.inc.php /etc/phpmyadmin/conf.d/config.inc.php
+RUN chmod 755 /etc/phpmyadmin/conf.d/config.inc.php
+ADD configs/phpmyadmin/phpmyadmin-setup.sh /phpmyadmin-setup.sh
+RUN chmod +x /phpmyadmin-setup.sh
+RUN /phpmyadmin-setup.sh
+
+
+
 
 # *******************************************************
 # DRUPAL 
@@ -132,6 +125,15 @@ ENV DRUPAL_VERSION ${DRUPAL_VERSION}
 ENV NODE_VERSION ${NODE_VERSION}
 ENV DRUPAL_ROOT ${DRUPAL_ROOT}
 
+# Install uploadprogress php extension from a php-7-supported src
+RUN /bin/bash -c 'cd /tmp/ && \
+      git clone https://github.com/Jan-E/uploadprogress.git && \
+      cd uploadprogress && \
+      phpize && \
+      ./configure && make && make install && \
+      echo "extension=uploadprogress.so" > /etc/php/7.0/mods-available/uploadprogress.ini && \
+      phpenmod uploadprogress'
+
 # Installing nodejs from binaries
 RUN cd /tmp && \
   curl -sL "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz" -o node-linux-x64.tar.gz && \
@@ -144,6 +146,7 @@ RUN npm install --global bower gulp-cli
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
 # Update PATH variable to include Composer binaries.
 ENV PATH "/root/.composer/vendor/bin:$PATH"
 
@@ -159,6 +162,11 @@ RUN curl https://drupalconsole.com/installer -L -o drupal.phar && \
 	chmod +x /usr/local/bin/drupal
 RUN drupal init
 
+
+# Setup MySQL, bind on all addresses.
+RUN sed -i -e 's/^bind-address\s*=\s*127.0.0.1/#bind-address = 127.0.0.1/' /etc/mysql/my.cnf
+RUN /usr/bin/mysqld_safe > /dev/null 2>&1 & 
+RUN mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON *.* TO drupal@localhost IDENTIFIED BY 'drupal'"
 
 # Install Drupal.
 RUN rm -rf /var/www
@@ -196,7 +204,7 @@ RUN sed -i 's/name="SIMPLETEST_DB" value=""/name="SIMPLETEST_DB" value="sqlite:\
 
 
 # Start
-# VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor","/var/log/mysql","/var/lib/mysql"]
-EXPOSE 80 3306 22 443
+VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor","/var/log/mysql","/var/lib/mysql"]
+EXPOSE 22 80 3306
 
 CMD ["supervisord", "-n"]
