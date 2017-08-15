@@ -3,11 +3,24 @@ FROM ubuntu:16.04
 
 # Arguments and versions
 ARG PHP_VERSION=7.0
+ARG DRUSH_VERSION=8.1.10
+ARG DRUPAL_VERSION=8.3.6
+ARG NODE_VERSION=6.10.0
+ARG DRUPAL_ROOT=/var/www/html/web
+ARG MYSQL_HOST=database
+ARG MYSQL_ROOT_PASSWORD=root
 
 # Environment Variables
 ENV DEBIAN_FRONTEND noninteractive
 ENV LOCALE en_US.UTF-8
 ENV PHP_VERSION ${PHP_VERSION}
+ENV DRUSH_VERSION ${DRUSH_VERSION}
+ENV DRUPAL_VERSION ${DRUPAL_VERSION}
+ENV NODE_VERSION ${NODE_VERSION}
+ENV DRUPAL_ROOT ${DRUPAL_ROOT}
+ENV MYSQL_HOST ${MYSQL_HOST}
+ENV MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
+
 
 # Base Packages
 RUN apt-get update -y
@@ -86,19 +99,10 @@ RUN a2enmod rewrite
 RUN a2enmod ssl
 RUN a2ensite default-ssl.conf
 
-# Setup PHPMyAdmin
-RUN apt-get install phpmyadmin -y
-RUN echo "\n# Include PHPMyAdmin configuration\nInclude /etc/phpmyadmin/apache.conf\n" >> /etc/apache2/apache2.conf
-RUN sed -i -e "s/\/\/ \$cfg\['Servers'\]\[\$i\]\['AllowNoPassword'\]/\$cfg\['Servers'\]\[\$i\]\['AllowNoPassword'\]/g" /etc/phpmyadmin/config.inc.php
-RUN sed -i -e "s/\$cfg\['Servers'\]\[\$i\]\['\(table_uiprefs\|history\)'\].*/\$cfg\['Servers'\]\[\$i\]\['\1'\] = false;/g" /etc/phpmyadmin/config.inc.php
 
 # Setup MySQL, bind on all addresses.
-RUN apt-get install -y mysql-server mysql-client 
-RUN mkdir -p /var/run/mysqld && \
-    chown -R mysql: /var/run/mysqld
-RUN sed -i -e 's/^bind-address\s*=\s*127.0.0.1/#bind-address = 127.0.0.1/' /etc/mysql/my.cnf
-RUN /etc/init.d/mysql start && \
-	mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO drupal@localhost IDENTIFIED BY 'drupal'"
+RUN apt-get install -y mysql-client 
+
 
 # Setup SSH.
 RUN apt-get install -y openssh-server
@@ -112,7 +116,6 @@ RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so
 RUN apt-get install -y supervisor
 RUN mkdir -p /var/log/supervisor
 RUN echo '[program:apache2]\ncommand=/bin/bash -c "source /etc/apache2/envvars && exec /usr/sbin/apache2 -DFOREGROUND"\nautorestart=true\n\n' >> /etc/supervisor/supervisord.conf
-RUN echo '[program:mysql]\ncommand=/usr/bin/pidproxy /var/run/mysqld/mysqld.pid /usr/sbin/mysqld\nautorestart=true\n\n' >> /etc/supervisor/supervisord.conf
 RUN echo '[program:sshd]\ncommand=/usr/sbin/sshd -D\n\n' >> /etc/supervisor/supervisord.conf
 
 
@@ -124,15 +127,6 @@ RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/7.0/cli/conf.d/20-xdebug.i
 # DRUPAL 
 # *******************************************************
 
-ARG DRUSH_VERSION=8.1.10
-ARG DRUPAL_VERSION=8.3.6
-ARG NODE_VERSION=6.10.0
-ARG DRUPAL_ROOT=/var/www/html/web
-
-ENV DRUSH_VERSION ${DRUSH_VERSION}
-ENV DRUPAL_VERSION ${DRUPAL_VERSION}
-ENV NODE_VERSION ${NODE_VERSION}
-ENV DRUPAL_ROOT ${DRUPAL_ROOT}
 
 # Installing nodejs from binaries
 RUN cd /tmp && \
@@ -179,20 +173,22 @@ RUN mkdir -p /var/www/sites/default/files && \
 	chmod 0664 /var/www/sites/default/services.yml && \
 	chown -R www-data:www-data /var/www/
 
-RUN cd /var/www && \
-	drush si -y standard --db-url=mysql://drupal:drupal@localhost/drupal --account-pass=admin && \
-	drush dl admin_menu devel && \
+#RUN cd /var/www && \
+#	drush si -y standard --db-url=mysql://root:$MYSQL_ROOT_PASSWORD@$MYSQL_HOST:3306/drupal --account-pass=admin && \
+#	drush dl admin_menu devel && \
 	# In order to enable Simpletest, we need to download PHPUnit.
-	composer install --dev && \
-	drush en -y bartik
-RUN cd /var/www && \
-	drush cset system.theme default 'bartik' -y
+#	composer install --dev && \
+#	drush en -y bartik
+#RUN cd /var/www && \
+#	drush cset system.theme default 'bartik' -y
 
+ADD configs/create-drupal-project.sh /create-drupal-project.sh
+RUN chmod +x /create-drupal-project.sh
 
 
 
 # Start
 # VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor","/var/log/mysql","/var/lib/mysql"]
-EXPOSE 80 3306 22 443
+EXPOSE 80 22 443
 
 CMD ["supervisord", "-n"]

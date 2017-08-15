@@ -1,12 +1,50 @@
 version: '3'
 services:
-  dev-d8.ateam:
+  env-dev-d8:
+    depends_on:
+      - database
     build: .
     environment:
-      - PROJECT_NAME="ateam-d8-dvinci"
+      PHP_VERSION: 7.0
+      DRUSH_VERSION: 8.1.10
+      DRUPAL_VERSION: 8.3.6
+      NODE_VERSION: 6.10.0
+      DRUPAL_ROOT: /var/www/html/web
+      MYSQL_HOST: database
+      MYSQL_ROOT_PASSWORD: root    
     ports:
       - 80:80
+      - 8080:8080
       - 222:22
-      - 33306:3306
+    networks:
+      - back  
     volumes:
       - ./src/:/var/www/html
+  database:
+    image: mysql:5.7.17
+    restart: always
+    volumes:
+      - database_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      # MYSQL_DATABASE: ateam
+    ports:
+      - 3306
+    networks:
+      - back
+  phpmyadmin:
+    depends_on:
+      - database
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: database
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - 7000:80  
+    networks:
+      - back
+networks:
+  back:
+volumes:
+  database_data:
