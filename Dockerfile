@@ -32,15 +32,26 @@ RUN apt-get install -y locales git wget curl vim debconf-utils sudo build-essent
 # Set locale
 RUN locale-gen $LOCALE && update-locale LANG=$LOCALE
 
-
-# Apache
+# Setup Apache.
 RUN apt-get install -y apache2 apache2-utils libapache2-mod-geoip geoip-database
-ADD configs/apache2/apache2-service.sh /apache2-service.sh
-ADD configs/apache2/apache2-setup.sh /apache2-setup.sh
-RUN chmod +x /*.sh
-ADD configs/apache2/apache_default /etc/apache2/sites-available/000-default.conf
-ADD configs/apache2/supervisor.conf /etc/supervisor/conf.d/apache2.conf
-RUN /apache2-setup.sh
+# ADD configs/apache2/apache2-service.sh /apache2-service.sh
+# ADD configs/apache2/apache2-setup.sh /apache2-setup.sh
+# RUN chmod +x /*.sh
+# ADD configs/apache2/apache_default /etc/apache2/sites-available/000-default.conf
+# ADD configs/apache2/supervisor.conf /etc/supervisor/conf.d/apache2.conf
+# RUN /apache2-setup.sh
+RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/000-default.conf
+RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/default-ssl.conf
+RUN echo "Listen 8080" >> /etc/apache2/ports.conf
+RUN echo "Listen 8081" >> /etc/apache2/ports.conf
+RUN echo "Listen 8443" >> /etc/apache2/ports.conf
+RUN sed -i 's/VirtualHost \*:80/VirtualHost \*:\*/' /etc/apache2/sites-available/000-default.conf
+RUN sed -i 's/VirtualHost __default__:443/VirtualHost _default_:443 _default_:8443/' /etc/apache2/sites-available/default-ssl.conf
+RUN a2enmod rewrite
+RUN a2enmod ssl
+RUN a2ensite default-ssl.conf
+
 
 # PHP and PHP packages that are important to running dynamic PHP based applications with Apache2 Webserver support 
 RUN sudo add-apt-repository ppa:ondrej/php
@@ -83,24 +94,8 @@ ADD configs/php/php.ini /etc/php/$PHP_VERSION/apache2/php.ini
 RUN sed -i 's/display_errors = Off/display_errors = On/' /etc/php/7.0/apache2/php.ini
 RUN sed -i 's/display_errors = Off/display_errors = On/' /etc/php/7.0/cli/php.ini
 
-# Setup Apache.
-# In order to run our Simpletest tests, we need to make Apache
-# listen on the same port as the one we forwarded. Because we use
-# 8080 by default, we set it up for that port.
-RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
-RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/000-default.conf
-RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/default-ssl.conf
-RUN echo "Listen 8080" >> /etc/apache2/ports.conf
-RUN echo "Listen 8081" >> /etc/apache2/ports.conf
-RUN echo "Listen 8443" >> /etc/apache2/ports.conf
-RUN sed -i 's/VirtualHost \*:80/VirtualHost \*:\*/' /etc/apache2/sites-available/000-default.conf
-RUN sed -i 's/VirtualHost __default__:443/VirtualHost _default_:443 _default_:8443/' /etc/apache2/sites-available/default-ssl.conf
-RUN a2enmod rewrite
-RUN a2enmod ssl
-RUN a2ensite default-ssl.conf
 
-
-# Setup MySQL, bind on all addresses.
+# Setup MySQL client.
 RUN apt-get install -y mysql-client 
 
 
@@ -188,7 +183,7 @@ RUN chmod +x /create-drupal-project.sh
 
 
 # Start
-# VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor","/var/log/mysql","/var/lib/mysql"]
+VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor"]
 EXPOSE 80 22 443
 
 CMD ["supervisord", "-n"]
