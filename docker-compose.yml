@@ -9,9 +9,9 @@ services:
       DRUSH_VERSION: 8.1.10
       DRUPAL_VERSION: 8.3.6
       NODE_VERSION: 6.10.0
-      DRUPAL_ROOT: /var/www/html/web
       MYSQL_HOST: database
-      MYSQL_ROOT_PASSWORD: root    
+      MYSQL_ROOT_PASSWORD: root
+      DRUPAL_PROJECT: testd8  
     container_name: env-dev-d8  
     ports:
       - 80:80
@@ -20,7 +20,7 @@ services:
     networks:
       - back  
     volumes:
-      - ./src/:/var/www/html
+      - ./src:/var/www
   database:
     image: mysql:5.7.17
     container_name: database
@@ -32,8 +32,8 @@ services:
       - 3306
     networks:
       - back
-    volumes:
-      - ./data/:/var/lib/mysql
+    #volumes:
+     # - ./data/:/var/lib/mysql
   phpmyadmin:
     depends_on:
       - database

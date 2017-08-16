@@ -6,9 +6,9 @@ ARG PHP_VERSION=7.0
 ARG DRUSH_VERSION=8.1.10
 ARG DRUPAL_VERSION=8.3.6
 ARG NODE_VERSION=6.10.0
-ARG DRUPAL_ROOT=/var/www/html/web
 ARG MYSQL_HOST=database
 ARG MYSQL_ROOT_PASSWORD=root
+ARG DRUPAL_PROJECT=testd8
 
 # Environment Variables
 ENV DEBIAN_FRONTEND noninteractive
@@ -17,9 +17,9 @@ ENV PHP_VERSION ${PHP_VERSION}
 ENV DRUSH_VERSION ${DRUSH_VERSION}
 ENV DRUPAL_VERSION ${DRUPAL_VERSION}
 ENV NODE_VERSION ${NODE_VERSION}
-ENV DRUPAL_ROOT ${DRUPAL_ROOT}
 ENV MYSQL_HOST ${MYSQL_HOST}
 ENV MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
+ENV DRUPAL_PROJECT ${DRUPAL_PROJECT}
 
 
 # Base Packages
@@ -34,12 +34,6 @@ RUN locale-gen $LOCALE && update-locale LANG=$LOCALE
 
 # Setup Apache.
 RUN apt-get install -y apache2 apache2-utils libapache2-mod-geoip geoip-database
-# ADD configs/apache2/apache2-service.sh /apache2-service.sh
-# ADD configs/apache2/apache2-setup.sh /apache2-setup.sh
-# RUN chmod +x /*.sh
-# ADD configs/apache2/apache_default /etc/apache2/sites-available/000-default.conf
-# ADD configs/apache2/supervisor.conf /etc/supervisor/conf.d/apache2.conf
-# RUN /apache2-setup.sh
 RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
 RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/000-default.conf
 RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/default-ssl.conf
@@ -48,6 +42,7 @@ RUN echo "Listen 8081" >> /etc/apache2/ports.conf
 RUN echo "Listen 8443" >> /etc/apache2/ports.conf
 RUN sed -i 's/VirtualHost \*:80/VirtualHost \*:\*/' /etc/apache2/sites-available/000-default.conf
 RUN sed -i 's/VirtualHost __default__:443/VirtualHost _default_:443 _default_:8443/' /etc/apache2/sites-available/default-ssl.conf
+RUN chown -R www-data:www-data /var/www/
 RUN a2enmod rewrite
 RUN a2enmod ssl
 RUN a2ensite default-ssl.conf
@@ -151,35 +146,8 @@ RUN curl https://drupalconsole.com/installer -L -o drupal.phar && \
 RUN drupal init
 
 
-# Install Drupal.
-RUN rm -rf /var/www
-RUN cd /var && \
-	drush dl drupal-$DRUPAL_VERSION && \
-	mv /var/drupal* /var/www
-RUN mkdir -p /var/www/sites/default/files && \
-	chmod a+w /var/www/sites/default -R && \
-	mkdir /var/www/sites/all/modules/contrib -p && \
-	mkdir /var/www/sites/all/modules/custom && \
-	mkdir /var/www/sites/all/themes/contrib -p && \
-	mkdir /var/www/sites/all/themes/custom && \
-	cp /var/www/sites/default/default.settings.php /var/www/sites/default/settings.php && \
-	cp /var/www/sites/default/default.services.yml /var/www/sites/default/services.yml && \
-	chmod 0664 /var/www/sites/default/settings.php && \
-	chmod 0664 /var/www/sites/default/services.yml && \
-	chown -R www-data:www-data /var/www/
-
-#RUN cd /var/www && \
-#	drush si -y standard --db-url=mysql://root:$MYSQL_ROOT_PASSWORD@$MYSQL_HOST:3306/drupal --account-pass=admin && \
-#	drush dl admin_menu devel && \
-	# In order to enable Simpletest, we need to download PHPUnit.
-#	composer install --dev && \
-#	drush en -y bartik
-#RUN cd /var/www && \
-#	drush cset system.theme default 'bartik' -y
-
 ADD configs/create-drupal-project.sh /create-drupal-project.sh
 RUN chmod +x /create-drupal-project.sh
-
 
 
 # Start
