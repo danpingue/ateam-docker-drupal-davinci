@@ -21,7 +21,6 @@ ENV MYSQL_HOST ${MYSQL_HOST}
 ENV MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
 ENV DRUPAL_PROJECT ${DRUPAL_PROJECT}
 
-
 # Base Packages
 RUN apt-get update -y
 
@@ -83,12 +82,15 @@ RUN apt-get install -y \
     php$PHP_VERSION-xmlrpc \
     php$PHP_VERSION-zip
 
+# Config PHP.
+# RUN sed -i 's/display_errors = Off/display_errors = On/' /etc/php/7.0/apache2/php.ini
+# RUN sed -i 's/display_errors = Off/display_errors = On/' /etc/php/7.0/cli/php.ini
 ADD configs/php/php.ini /etc/php/$PHP_VERSION/apache2/php.ini
+ADD configs/php/php.ini /etc/php/$PHP_VERSION/cli/php.ini
 
-# Setup PHP.
-RUN sed -i 's/display_errors = Off/display_errors = On/' /etc/php/7.0/apache2/php.ini
-RUN sed -i 's/display_errors = Off/display_errors = On/' /etc/php/7.0/cli/php.ini
-
+# Config XDebug.
+RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini
+RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/$PHP_VERSION/cli/conf.d/20-xdebug.ini
 
 # Setup MySQL client.
 RUN apt-get install -y mysql-client 
@@ -109,14 +111,9 @@ RUN echo '[program:apache2]\ncommand=/bin/bash -c "source /etc/apache2/envvars &
 RUN echo '[program:sshd]\ncommand=/usr/sbin/sshd -D\n\n' >> /etc/supervisor/supervisord.conf
 
 
-# Setup XDebug.
-RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/7.0/apache2/conf.d/20-xdebug.ini
-RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/7.0/cli/conf.d/20-xdebug.ini
-
 # *******************************************************
-# DRUPAL 
+# DRUPAL support
 # *******************************************************
-
 
 # Installing nodejs from binaries
 RUN cd /tmp && \
@@ -136,22 +133,19 @@ ENV PATH "/root/.composer/vendor/bin:$PATH"
 ## Install Drush.
 RUN composer global require drush/drush:$DRUSH_VERSION
 RUN composer global update
-# binding
-RUN ln -s /root/.composer/vendor/bin/drush /usr/local/bin/drush
+
 
 # Install Drupal Console.
-RUN curl https://drupalconsole.com/installer -L -o drupal.phar && \
-	mv drupal.phar /usr/local/bin/drupal && \
-	chmod +x /usr/local/bin/drupal
-RUN drupal init
+RUN composer global require drupal/console:@stable
 
 
 ADD configs/create-drupal-project.sh /create-drupal-project.sh
 RUN chmod +x /create-drupal-project.sh
-
 
 # Start
 VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor"]
 EXPOSE 80 22 443
 
 CMD ["supervisord", "-n"]
+
+

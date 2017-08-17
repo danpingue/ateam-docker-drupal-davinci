@@ -20,7 +20,7 @@ services:
     networks:
       - back  
     volumes:
-      - ./src:/var/www
+      - ./src:/var/www:rw
   database:
     image: mysql:5.7.17
     container_name: database
