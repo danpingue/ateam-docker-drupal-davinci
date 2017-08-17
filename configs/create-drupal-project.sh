@@ -14,7 +14,14 @@ composer require drupal/geolocation
 composer require drupal/panels
 composer require drupal/paragraphs
 
+drush en ctools -y
+drush en da_vinci -y
+drush en geolocation -y
+drush en panels -y
+drush en paragraphs -y
+
 cd /var/www/$DRUPAL_PROJECT/web
 drush cset system.theme default 'da_vinci' -y
+# drush cset system.theme default 'bartik' -y
 
 chown -R www-data:www-data /var/www/
