@@ -5,10 +5,12 @@ FROM ubuntu:16.04
 ARG PHP_VERSION=7.0
 ARG DRUSH_VERSION=8.1.10
 ARG DRUPAL_VERSION=8.3.6
+ARG DRUPAL_VERSION_MAYOR=8
 ARG NODE_VERSION=6.10.0
 ARG MYSQL_HOST=database
 ARG MYSQL_ROOT_PASSWORD=root
 ARG DRUPAL_PROJECT=testd8
+ARG DEVELOPER=ocastano
 
 # Environment Variables
 ENV DEBIAN_FRONTEND noninteractive
@@ -16,10 +18,12 @@ ENV LOCALE en_US.UTF-8
 ENV PHP_VERSION ${PHP_VERSION}
 ENV DRUSH_VERSION ${DRUSH_VERSION}
 ENV DRUPAL_VERSION ${DRUPAL_VERSION}
+ENV DRUPAL_VERSION_MAYOR ${DRUPAL_VERSION_MAYOR}
 ENV NODE_VERSION ${NODE_VERSION}
 ENV MYSQL_HOST ${MYSQL_HOST}
 ENV MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
 ENV DRUPAL_PROJECT ${DRUPAL_PROJECT}
+ENV DEVELOPER ${DEVELOPER}
 
 # Base Packages
 RUN apt-get update -y
@@ -83,8 +87,6 @@ RUN apt-get install -y \
     php$PHP_VERSION-zip
 
 # Config PHP.
-# RUN sed -i 's/display_errors = Off/display_errors = On/' /etc/php/7.0/apache2/php.ini
-# RUN sed -i 's/display_errors = Off/display_errors = On/' /etc/php/7.0/cli/php.ini
 ADD configs/php/php.ini /etc/php/$PHP_VERSION/apache2/php.ini
 ADD configs/php/php.ini /etc/php/$PHP_VERSION/cli/php.ini
 
@@ -115,32 +117,61 @@ RUN echo '[program:sshd]\ncommand=/usr/sbin/sshd -D\n\n' >> /etc/supervisor/supe
 # DRUPAL support
 # *******************************************************
 
-# Installing nodejs from binaries
-RUN cd /tmp && \
-  curl -sL "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz" -o node-linux-x64.tar.gz && \
-  tar -zxf "node-linux-x64.tar.gz" -C /usr/local --strip-components=1 && \
-  rm node-linux-x64.tar.gz && \
-  ln -s /usr/local/bin/node /usr/local/bin/nodejs
+
+# ******************************************
+# Start USER developer 
+# Create user 
+RUN mkdir /home/$DEVELOPER
+RUN chown 1000:1000 -R /home/$DEVELOPER
+RUN echo "$DEVELOPER:!:1000:1000:$DEVELOPER,,,:/home/$DEVELOPER:/bin/bash" >> /etc/passwd
+RUN echo "$DEVELOPER:!:1000:" >> /etc/group
+RUN echo "$DEVELOPER:*:99999:0:99999:7:::" >> /etc/shadow
+RUN echo "$DEVELOPER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$DEVELOPER
+RUN chmod 0440 /etc/sudoers.d/$DEVELOPER
+ADD configs/user/bashrc /home/$DEVELOPER/.bashrc
+#RUN source ~/.bashrc
+RUN mkdir /home/$DEVELOPER/Proyectos
+
+# Change user for install dependencies
+USER $DEVELOPER
+WORKDIR /home/$DEVELOPER
+
+# Install node
+RUN cd /home/$DEVELOPER
+RUN curl -sL "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz" -o node-linux-x64.tar.gz
+RUN sudo tar -zxf "node-linux-x64.tar.gz" -C /usr/local --strip-components=1 
+RUN rm node-linux-x64.tar.gz 
+RUN sudo ln -s /usr/local/bin/node /usr/local/bin/nodejs
 
 # Install bower and gulp-cli globally
-RUN npm install --global bower gulp-cli
+RUN sudo npm install --global bower gulp-cli
 
 # Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-# Update PATH variable to include Composer binaries.
-ENV PATH "/root/.composer/vendor/bin:$PATH"
+RUN curl -sS https://getcomposer.org/installer | php 
+RUN sudo mv composer.phar /usr/local/bin/composer
+RUN sudo chmod a+x /usr/local/bin/composer
+ENV PATH "/home/$DEVELOPER/.composer/vendor/bin:$PATH"
 
 ## Install Drush.
 RUN composer global require drush/drush:$DRUSH_VERSION
 RUN composer global update
 
-
 # Install Drupal Console.
 RUN composer global require drupal/console:@stable
 
+# End USER developer
+# ******************************************
 
+
+# Copy script for create projects
 ADD configs/create-drupal-project.sh /create-drupal-project.sh
-RUN chmod +x /create-drupal-project.sh
+RUN sudo chmod +x /create-drupal-project.sh
+
+ADD configs/create-user-drupal-project.sh /home/$DEVELOPER/create-user-drupal-project.sh
+RUN sudo chmod +x /home/$DEVELOPER/create-user-drupal-project.sh
+
+# Change user to root
+USER root
 
 # Start
 VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor"]
@@ -149,3 +180,8 @@ EXPOSE 80 22 443
 CMD ["supervisord", "-n"]
 
 
+
+
+
+
+#docker exec -u ocastano -it env-dev-d8 bash
