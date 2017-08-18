@@ -9,7 +9,7 @@
   - MYSQL
   - PHPMyAdmin
   - Supervisor
-  - NODE 
+  - Node
   - Bower and Gulp
   - Composer
   - Drupal console
