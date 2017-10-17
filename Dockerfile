@@ -159,6 +159,17 @@ RUN composer global update
 # Install Drupal Console.
 RUN composer global require drupal/console:@stable
 
+# Install Drupal Coder
+RUN composer global require drupal/coder
+
+# Add Drupal and DrupalPractice rules
+RUN ln -s ~/.composer/vendor/drupal/coder/coder_sniffer/Drupal ~/.composer/vendor/squizlabs/php_codesniffer/CodeSniffer/Standards/Drupal
+RUN ln -s ~/.composer/vendor/drupal/coder/coder_sniffer/DrupalPractice ~/.composer/vendor/squizlabs/php_codesniffer/CodeSniffer/Standards/DrupalPractice
+# Test it
+RUN phpcs -i
+
+
+
 # End USER developer
 # ******************************************
 

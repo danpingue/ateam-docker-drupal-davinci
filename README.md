@@ -57,12 +57,12 @@
 
 - Build images
   ```sh
-  $ docker composer build
+  $ docker-compose build
   ```
 
 - Run images
   ```sh
-  $ docker composer up
+  $ docker-compose up
   ```
 
 ## Ports and services
