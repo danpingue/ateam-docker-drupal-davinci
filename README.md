@@ -57,12 +57,12 @@
 
 - Build images
   ```sh
-  $ docker composer build
+  $ docker-compose build
   ```
 
 - Run images
   ```sh
-  $ docker composer up
+  $ docker-compose up
   ```
 
 ## Ports and services
@@ -107,7 +107,7 @@ $ cd /var/www/$DRUPAL_PROJECT
 ```sh
 $ docker exec -u YOUR_DEVELOPER_NAME -it env-dev-d8 bash
 
-$  ./create-drupal-project.sh YOUR_NAME_FOR_PROJECT
+$  ./create-user-drupal-project.sh YOUR_NAME_FOR_PROJECT
 
 $ cd Proyectos/YOUR_NAME_FOR_PROJECT
 ```

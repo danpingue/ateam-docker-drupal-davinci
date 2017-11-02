@@ -159,6 +159,15 @@ RUN composer global update
 # Install Drupal Console.
 RUN composer global require drupal/console:@stable
 
+# Install Drupal Coder
+RUN composer global require drupal/coder
+RUN composer global require dealerdirect/phpcodesniffer-composer-installer
+
+# Test it
+RUN phpcs -i
+
+
+
 # End USER developer
 # ******************************************
 
