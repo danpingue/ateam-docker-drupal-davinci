@@ -127,11 +127,23 @@ $ cd Proyectos/YOUR_NAME_FOR_PROJECT
 $ docker-compose build --force env-dev-d8
 ```
 
+## Delete all docker images and containers
+
+```sh
+# Stop all containerrs
+$ docker stop $(docker ps -q)
+# Delete all containers
+$ docker rm $(docker ps -a -q)
+# Delete all images
+$ docker rmi $(docker images -q)
+```
+
+
 ### ATeam - Credits
 
 | Codename | Role |
 | ------   | ------ |
 | ocastano | Hannibal, fullstack, team leader |
-| nesta    | Murdock, frontend, crazy head    |
+| nefta    | Murdock, frontend, crazy head    |
 | dmarrufo | Baracus, backend, brute force    |
 | lluvigne | Peck, backend, pretty code       |
