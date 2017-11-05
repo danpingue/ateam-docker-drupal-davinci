@@ -24,7 +24,7 @@ services:
     volumes:
       - ./src:/home/ocastano/Proyectos
   database:
-    image: mysql:5.7.17
+    image: mysql:5.7.20
     container_name: database
     restart: always
     environment:
@@ -32,7 +32,7 @@ services:
     ports:
       - 3306
     networks:
-      - back
+      - back   
   phpmyadmin:
     depends_on:
       - database
@@ -45,7 +45,7 @@ services:
     ports:
       - 7000:80  
     networks:
-      - back
+      - back      
 networks:
   back:
 volumes:
