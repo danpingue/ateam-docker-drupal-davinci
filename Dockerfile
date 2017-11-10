@@ -119,6 +119,8 @@ RUN echo "$DEVELOPER:*:99999:0:99999:7:::" >> /etc/shadow
 RUN echo "$DEVELOPER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$DEVELOPER
 RUN chmod 0440 /etc/sudoers.d/$DEVELOPER
 ADD configs/user/bashrc /home/$DEVELOPER/.bashrc
+ADD configs/user/bash_aliases /home/$DEVELOPER/.bash_aliases
+ADD configs/user/bash_profile /home/$DEVELOPER/.bash_profile
 #RUN source ~/.bashrc
 
 
