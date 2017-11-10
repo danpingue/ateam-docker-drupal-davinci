@@ -3,17 +3,19 @@ services:
   env-dev-d8:
     depends_on:
       - database
-    build: .
+    build: 
+      context: .
+      args:
+        PHP_VERSION: 7.0
+        DRUSH_VERSION: 8.1.10
+        NODE_VERSION: 6.10.0
+        DEVELOPER: ${USER}
     environment:
-      PHP_VERSION: 7.0
-      DRUSH_VERSION: 8.1.10
-      DRUPAL_VERSION: 8.3.6
-      NODE_VERSION: 6.10.0
       DRUPAL_VERSION_MAYOR: 8
       MYSQL_HOST: database
       MYSQL_ROOT_PASSWORD: root
       DRUPAL_PROJECT: testd8  
-      DEVELOPER: ocastano
+      DEVELOPER: ${USER}
     container_name: env-dev-d8  
     ports:
       - 80:80
