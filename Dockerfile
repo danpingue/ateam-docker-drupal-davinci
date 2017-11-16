@@ -81,8 +81,12 @@ ADD configs/php/php.ini /etc/php/$PHP_VERSION/apache2/php.ini
 ADD configs/php/php.ini /etc/php/$PHP_VERSION/cli/php.ini
 
 # Config XDebug.
-RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini
-RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/$PHP_VERSION/cli/conf.d/20-xdebug.ini
+RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini \
+    && echo "xdebug.remote_enable=1" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini \
+    && echo "xdebug.remote_handler=dbgp" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini \
+    && echo "xdebug.remote_mode=req" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini \
+    && echo "xdebug.remote_connect_back=1" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini \
+    && echo "xdebug.remote_port=9000" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini
 
 # Setup MySQL client.
 RUN apt-get install -y mysql-client 
