@@ -80,16 +80,16 @@
 
 ## Access to env-dev-d8 container
 
-### root access 
+### Root access
     
 ```sh
 $ docker exec -it env-dev-d8 bash
 ```
 
-### developer access
+### Developer access
 
 ```sh
-$ docker exec -u YOUR_DEVELOPER_NAME -it env-dev-d8 bash
+$ docker exec -u $USER -it env-dev-d8 bash
 ```
 
 ## Create composer drupal project in env-dev-d8 container
@@ -112,7 +112,7 @@ $ cd /var/www/$DRUPAL_PROJECT
 ### Developer access and custom project name
 
 ```sh
-$ docker exec -u YOUR_DEVELOPER_NAME -it env-dev-d8 bash
+$ docker exec -u $USER -it env-dev-d8 bash
 
 $  ./create-user-drupal-project.sh YOUR_NAME_FOR_PROJECT
 
