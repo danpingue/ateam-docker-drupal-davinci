@@ -46,10 +46,17 @@
   $ sudo apt-get install docker-ce
   ```
 
+- Install last docker-compose version (current version: 1.17.0)
+  ```sh
+  $ sudo rm /usr/local/bin/docker-compose
+
+  $ sudo curl -L https://github.com/docker/compose/releases/download/1.17.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+
+  $ sudo chmod +x /usr/local/bin/docker-compose
+  ```
+
 ## Customomise docker-compose.yml
 - Set DRUPAL_PROJECT to your default project name
-- Set DEVELOPER to your user
-- Set volumes to your developer user (change ocastano for your user)
 
 ## Run containers
 
@@ -87,7 +94,7 @@ $ docker exec -u YOUR_DEVELOPER_NAME -it env-dev-d8 bash
 
 ## Create composer drupal project in env-dev-d8 container
 
-### root access (general project with default name in docker-compose.yml)
+### Root access (general project with default name in docker-compose.yml)
     
 ```sh
 $ docker exec -it env-dev-d8 bash
@@ -102,7 +109,7 @@ $ cd /var/www/$DRUPAL_PROJECT
 > Open browser and go to: http://localhost
 
 
-### developer access and custon project name
+### Developer access and custom project name
 
 ```sh
 $ docker exec -u YOUR_DEVELOPER_NAME -it env-dev-d8 bash
