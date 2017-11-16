@@ -24,7 +24,7 @@ services:
     networks:
       - back  
     volumes:
-      - ./src:/home/ocastano/Proyectos
+      - ./src:/home/${USER}/Proyectos
   database:
     image: mysql:5.7.20
     container_name: database
