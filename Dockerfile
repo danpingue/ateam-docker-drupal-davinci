@@ -133,7 +133,7 @@ USER $DEVELOPER
 WORKDIR /home/$DEVELOPER
 
 RUN mkdir /home/$DEVELOPER/Proyectos
-RUN chown $DEVELOPER:$DEVELOPER /home/$DEVELOPER/Proyectos
+RUN sudo chown $DEVELOPER:$DEVELOPER /home/$DEVELOPER/Proyectos
 
 # Install node
 RUN cd /home/$DEVELOPER

@@ -3,6 +3,8 @@
 DRUPAL_PROJECT=$1
 DEVELOPER_HOME=/home/$DEVELOPER/Proyectos
 
+sudo chown $DEVELOPER:$DEVELOPER $DEVELOPER_HOME
+
 cd $DEVELOPER_HOME
 
 composer create-project drupal-composer/drupal-project:$DRUPAL_VERSION_MAYOR.x-dev $DRUPAL_PROJECT --stability dev --no-interaction
