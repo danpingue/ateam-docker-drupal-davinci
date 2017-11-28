@@ -26,7 +26,7 @@ services:
     volumes:
       - ./src:/home/${USER}/Proyectos
   database:
-    image: mariadb
+    image: mysql:5.7.20
     container_name: database
     restart: always
     environment:
