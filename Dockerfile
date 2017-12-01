@@ -16,35 +16,44 @@ ENV NODE_VERSION ${NODE_VERSION}
 ENV DEVELOPER ${DEVELOPER}
 
 # Base Packages
-RUN apt-get update -y
-
-# Basic packages
-RUN apt-get install -y locales git wget curl vim debconf-utils sudo build-essential autoconf libpcre3-dev rsync \
-        software-properties-common python-software-properties
+RUN apt-get update -y \
+    && apt-get install -y \
+       locales \
+       git \
+       wget \
+       curl \
+       vim \
+       debconf-utils \
+       sudo \
+       build-essential \
+       autoconf \
+       libpcre3-dev \
+       rsync \
+       software-properties-common \
+       python-software-properties
 
 # Set locale
 RUN locale-gen $LOCALE && update-locale LANG=$LOCALE
 
 # Setup Apache.
-RUN apt-get install -y apache2 apache2-utils libapache2-mod-geoip geoip-database
-RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
-RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/000-default.conf
-RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/default-ssl.conf
-RUN echo "Listen 8080" >> /etc/apache2/ports.conf
-RUN echo "Listen 8081" >> /etc/apache2/ports.conf
-RUN echo "Listen 8443" >> /etc/apache2/ports.conf
-RUN sed -i 's/VirtualHost \*:80/VirtualHost \*:\*/' /etc/apache2/sites-available/000-default.conf
-RUN sed -i 's/VirtualHost __default__:443/VirtualHost _default_:443 _default_:8443/' /etc/apache2/sites-available/default-ssl.conf
-RUN chown -R www-data:www-data /var/www/
-RUN a2enmod rewrite
-RUN a2enmod ssl
-RUN a2ensite default-ssl.conf
-
+RUN apt-get install -y apache2 apache2-utils libapache2-mod-geoip geoip-database \
+    && sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf \
+    && sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/000-default.conf \
+    && sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www/' /etc/apache2/sites-available/default-ssl.conf \
+    && echo "Listen 8080" >> /etc/apache2/ports.conf \
+    && echo "Listen 8081" >> /etc/apache2/ports.conf \
+    && echo "Listen 8443" >> /etc/apache2/ports.conf \
+    && sed -i 's/VirtualHost \*:80/VirtualHost \*:\*/' /etc/apache2/sites-available/000-default.conf \
+    && sed -i 's/VirtualHost __default__:443/VirtualHost _default_:443 _default_:8443/' /etc/apache2/sites-available/default-ssl.conf \
+    && chown -R www-data:www-data /var/www/ \
+    && a2enmod rewrite \
+    && a2enmod ssl \
+    && a2ensite default-ssl.conf
 
 # PHP and PHP packages that are important to running dynamic PHP based applications with Apache2 Webserver support 
-RUN sudo add-apt-repository ppa:ondrej/php
-RUN sudo apt-get update
-RUN apt-get install -y \
+RUN sudo add-apt-repository ppa:ondrej/php \
+    && sudo apt-get update \
+    && apt-get install -y \
     php$PHP_VERSION \
     libapache2-mod-php$PHP_VERSION \
     php$PHP_VERSION-bcmath \
@@ -80,7 +89,7 @@ RUN apt-get install -y \
 ADD configs/php/php.ini /etc/php/$PHP_VERSION/apache2/php.ini
 ADD configs/php/php.ini /etc/php/$PHP_VERSION/cli/php.ini
 
-# Config XDebug.
+# Setup XDebug.
 RUN echo "xdebug.max_nesting_level = 300" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini \
     && echo "xdebug.remote_enable=1" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini \
     && echo "xdebug.remote_handler=dbgp" >> /etc/php/$PHP_VERSION/apache2/conf.d/20-xdebug.ini \
@@ -93,18 +102,18 @@ RUN apt-get install -y mysql-client
 
 
 # Setup SSH.
-RUN apt-get install -y openssh-server
-RUN echo 'root:root' | chpasswd
-RUN sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-RUN mkdir /var/run/sshd && chmod 0755 /var/run/sshd
-RUN mkdir -p /root/.ssh/ && touch /root/.ssh/authorized_keys
-RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+RUN apt-get install -y openssh-server \
+    && echo 'root:root' | chpasswd \
+    && sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && mkdir /var/run/sshd && chmod 0755 /var/run/sshd \
+    && mkdir -p /root/.ssh/ && touch /root/.ssh/authorized_keys \
+    && sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
 
 # Supervisor
-RUN apt-get install -y supervisor
-RUN mkdir -p /var/log/supervisor
-RUN echo '[program:apache2]\ncommand=/bin/bash -c "source /etc/apache2/envvars && exec /usr/sbin/apache2 -DFOREGROUND"\nautorestart=true\n\n' >> /etc/supervisor/supervisord.conf
-RUN echo '[program:sshd]\ncommand=/usr/sbin/sshd -D\n\n' >> /etc/supervisor/supervisord.conf
+RUN apt-get install -y supervisor \
+    && mkdir -p /var/log/supervisor \
+    && echo '[program:apache2]\ncommand=/bin/bash -c "source /etc/apache2/envvars && exec /usr/sbin/apache2 -DFOREGROUND"\nautorestart=true\n\n' >> /etc/supervisor/supervisord.conf \
+    && echo '[program:sshd]\ncommand=/usr/sbin/sshd -D\n\n' >> /etc/supervisor/supervisord.conf
 
 
 # *******************************************************
@@ -115,25 +124,23 @@ RUN echo '[program:sshd]\ncommand=/usr/sbin/sshd -D\n\n' >> /etc/supervisor/supe
 # ******************************************
 # Start USER developer 
 # Create user 
-RUN mkdir /home/$DEVELOPER
-RUN chown 1000:1000 -R /home/$DEVELOPER
-RUN echo "$DEVELOPER:!:1000:1000:$DEVELOPER,,,:/home/$DEVELOPER:/bin/bash" >> /etc/passwd
-RUN echo "$DEVELOPER:!:1000:" >> /etc/group
-RUN echo "$DEVELOPER:*:99999:0:99999:7:::" >> /etc/shadow
-RUN echo "$DEVELOPER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$DEVELOPER
-RUN chmod 0440 /etc/sudoers.d/$DEVELOPER
+RUN mkdir /home/$DEVELOPER \
+    && chown 1000:1000 -R /home/$DEVELOPER \
+    && echo "$DEVELOPER:!:1000:1000:$DEVELOPER,,,:/home/$DEVELOPER:/bin/bash" >> /etc/passwd \
+    && echo "$DEVELOPER:!:1000:" >> /etc/group \
+    && echo "$DEVELOPER:*:99999:0:99999:7:::" >> /etc/shadow \
+    && echo "$DEVELOPER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$DEVELOPER \
+    && chmod 0440 /etc/sudoers.d/$DEVELOPER
 ADD configs/user/bashrc /home/$DEVELOPER/.bashrc
 ADD configs/user/bash_aliases /home/$DEVELOPER/.bash_aliases
 ADD configs/user/bash_profile /home/$DEVELOPER/.bash_profile
-#RUN source ~/.bashrc
-
 
 # Change user for install dependencies
 USER $DEVELOPER
 WORKDIR /home/$DEVELOPER
 
-RUN mkdir /home/$DEVELOPER/Proyectos
-RUN sudo chown $DEVELOPER:$DEVELOPER /home/$DEVELOPER/Proyectos
+RUN mkdir /home/$DEVELOPER/Proyectos \
+    && sudo chown $DEVELOPER:$DEVELOPER /home/$DEVELOPER/Proyectos
 
 # Install node
 RUN cd /home/$DEVELOPER
@@ -146,26 +153,21 @@ RUN sudo ln -s /usr/local/bin/node /usr/local/bin/nodejs
 RUN sudo npm install --global bower gulp-cli
 
 # Install Composer
-RUN curl -sS https://getcomposer.org/installer | php 
-RUN sudo mv composer.phar /usr/local/bin/composer
-RUN sudo chmod a+x /usr/local/bin/composer
+RUN curl -sS https://getcomposer.org/installer | php \
+    && sudo mv composer.phar /usr/local/bin/composer \
+    && sudo chmod a+x /usr/local/bin/composer
+
 ENV PATH "/home/$DEVELOPER/.composer/vendor/bin:$PATH"
 
-## Install Drush.
-RUN composer global require drush/drush:$DRUSH_VERSION
-RUN composer global update
-
-# Install Drupal Console.
-RUN composer global require drupal/console:@stable
-
-# Install Drupal Coder
-RUN composer global require drupal/coder
-RUN composer global require dealerdirect/phpcodesniffer-composer-installer
+## Install Drush, drupal console, coder and codesniffer standards.
+RUN composer global require drush/drush:$DRUSH_VERSION \
+    && composer global update \
+    && composer global require drupal/console:@stable \
+    && composer global require drupal/coder \
+    && composer global require dealerdirect/phpcodesniffer-composer-installer
 
 # Test it
 RUN phpcs -i
-
-
 
 # End USER developer
 # ******************************************
@@ -186,10 +188,5 @@ VOLUME ["/var/www/html","/var/log/apache2","/var/log/supervisor"]
 EXPOSE 80 22 443
 
 CMD ["supervisord", "-n"]
-
-
-
-
-
 
 #docker exec -u ocastano -it env-dev-d8 bash
